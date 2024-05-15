@@ -15,23 +15,38 @@ class Media:
         self.tmdb_api_key = tmdb_api_key
         self.cache = {}
 
-    def ask_to_select(self, search_res):
+    def ask_to_select(self, orig_filename, selection_options):
         """Interface to select from search options"""
-        for i, item in enumerate(search_res):
-            print(
-                f"{i+1} {item.get('name')} ({item.get('first_air_date')}) [{item.get('id')}]"
-            )
+
+        print(orig_filename)
+        print("\n".join(selection_options))
 
         try:
             selection = int(input("\nSelect option using num: "))
         except KeyboardInterrupt:
             exit(0)
 
-        if selection < 1 or selection > len(search_res):
+        if selection < 1 or selection > len(selection_options):
             print("Index out of range...")
             exit(1)
 
         return int(selection) - 1
+
+    def confirm_and_exec(self, rename_data):
+        if not rename_data:
+            return
+
+        print("\n".join(f"{old} -> {new}" for old, new in rename_data))
+
+        try:
+            selection = input("\nDo you want to proceed?: ")
+        except KeyboardInterrupt:
+            exit(0)
+
+        if selection == "y":
+            for old, new in rename_data:
+                os.makedirs(os.path.dirname(new), exist_ok=True)
+                os.rename(old, new)
 
     def rename(self):
         pass
@@ -41,7 +56,7 @@ class Tv(Media):
     def __init__(self, tmdb_api_key, dest_path, files):
         super().__init__(tmdb_api_key, dest_path, files)
 
-    def get_details(self, show_name):
+    def get_details(self, orig_filename, show_name):
         """Returns TMDB ID, Name of Show and Release Year"""
         url = f"{self.tmdb_url}/search/tv"
         res = requests.get(
@@ -53,20 +68,24 @@ class Tv(Media):
         if not res:
             new_show_name = " ".join(show_name.split()[:-1])
             if new_show_name:
-                return self.get_details(new_show_name)
+                return self.get_details(orig_filename, new_show_name)
 
         if len(res) == 1:
             res = res[0]
         else:
-            selection = self.ask_to_select(res)
+            selection_options = [
+                f"{i+1} {item.get('name')} ({item.get('first_air_date')}) [{item.get('id')}]"
+                for i, item in enumerate(res)
+            ]
+            selection = self.ask_to_select(orig_filename, selection_options)
             res = res[selection]
+
         details = (
             res.get("id"),
             res.get("name"),
             res.get("first_air_date").split("-")[0],
         )
 
-        self.cache[show_name] = details
         return details
 
     def get_season_and_episode(self, file):
@@ -86,6 +105,7 @@ class Tv(Media):
         return res[0].strip()
 
     def rename(self):
+        rename_data = []
         for file in self.files:
             base_path = os.path.basename(file)
 
@@ -98,7 +118,7 @@ class Tv(Media):
             if self.cache.get(show_name):
                 show_details = self.cache.get(show_name)
             else:
-                show_details = self.get_details(show_name)
+                show_details = self.get_details(base_path, show_name)
                 self.cache[show_name] = show_details
 
             if not show_details:
@@ -113,15 +133,16 @@ class Tv(Media):
             season, episode = se
             # print(f"{season=}, {episode=}")
 
-            dir = os.path.join(
-                self.dest_path, f"{tmdb_name} ({tmdb_year})", f"Season {season}"
+            new_path = os.path.join(
+                self.dest_path,
+                f"{tmdb_name} ({tmdb_year})",
+                f"Season {season}",
+                base_path,
             )
-            new_path = os.path.join(dir, base_path)
+            rename_data.append((file, new_path))
 
-            print(f"{file} -> {new_path}")
+        self.confirm_and_exec(rename_data)
 
-            os.makedirs(dir, exist_ok=True)
-            os.rename(file, new_path)
 
 
 if __name__ == "__main__":
