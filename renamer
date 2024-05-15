@@ -272,3 +272,22 @@ if __name__ == "__main__":
         exit(1)
 
     media.rename()
+
+    # delete dir if its empty after rename
+    print("deleting empty directories...")
+    for path in sys.argv[3:]:
+        if not isdir(path):
+            continue
+
+        dir_tree = [
+            os.path.join(r, dir)
+            for r, d, _ in os.walk(path, topdown=False)
+            for dir in d
+        ]
+        dir_tree.append(path)
+
+        for d in dir_tree:
+            try:
+                os.rmdir(d)
+            except OSError as e:
+                print(e)
