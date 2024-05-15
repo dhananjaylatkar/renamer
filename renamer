@@ -236,17 +236,30 @@ if __name__ == "__main__":
         exit(1)
 
     if len(sys.argv) < 4:
-        print("Usage: python3 renamer.py <tv|mov> <dest_path> <files>")
+        print("Usage: python3 renamer.py <tv|mov> <dest_path> <files and/or dirs>")
         exit(1)
+
+    def is_media_file(file):
+        _, ext = os.path.splitext(file)
+        return ext in [".mkv", ".mp4", ".avi"]
 
     paths = []
     for path in sys.argv[3:]:
         if isdir(path):
             paths.extend(
-                [os.path.join(r, file) for r, _, f in os.walk(path) for file in f]
+                [
+                    os.path.join(r, file)
+                    for r, _, f in os.walk(path)
+                    for file in f
+                    if is_media_file(file)
+                ]
             )
-        elif isfile(path):
+        elif isfile(path) and is_media_file(path):
             paths.append(path)
+
+    if not paths:
+        print("No media files found in given path")
+        exit(1)
 
     media = None
     if sys.argv[1] == "tv":
