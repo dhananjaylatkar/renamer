@@ -18,5 +18,10 @@ $ ln -sf ${PWD}/renamer/renamer ${HOME}/.local/bin/renamer
 
 ```shell
 $ export TMDB_API_KEY=<your_key>
+
+# rename tv shows
 $ renamer tv <dest_dir> <src_file1> <src_file2> <src_dir1> ...
+
+# rename movies
+$ renamer mov <dest_dir> <src_file1> <src_file2> <src_dir1> ...
 ```
