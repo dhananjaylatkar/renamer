@@ -48,6 +48,10 @@ class Media:
                 os.makedirs(os.path.dirname(new), exist_ok=True)
                 os.rename(old, new)
 
+    def sanitize(self, name):
+        blacklist = set("?:!/;'\",=")
+        return "".join(c for c in name if c not in blacklist)
+
     def rename(self):
         pass
 
@@ -135,7 +139,7 @@ class Tv(Media):
 
             new_path = os.path.join(
                 self.dest_path,
-                f"{tmdb_name} ({tmdb_year})",
+                f"{self.sanitize(tmdb_name)} ({tmdb_year})",
                 f"Season {season}",
                 base_path,
             )
@@ -222,7 +226,7 @@ class Movie(Media):
             tmdb_id, tmdb_name, tmdb_year, tmdb_col = movie_details
 
             new_path = os.path.join(
-                self.dest_path, tmdb_col, f"{tmdb_name} ({tmdb_year})", base_path
+                self.dest_path, self.sanitize(tmdb_col), f"{self.sanitize(tmdb_name)} ({tmdb_year})", base_path
             )
             rename_data.append((file, new_path))
 
