@@ -251,7 +251,7 @@ class Music(Media):
             artist = audio.get("artist", [""])[0]
             album = audio.get("album", [""])[0]
             year = audio.get("date", [""])[0].split("-")[0]
-            tracknumber = audio.get("tracknumber", [""])[0].split("/")[0]
+            tracknumber = int(audio.get("tracknumber", [""])[0].split("/")[0])
 
             self.rename_data.append(
                 (
@@ -259,7 +259,7 @@ class Music(Media):
                     os.path.join(
                         self.dest_path,
                         f"{artist} - {year} - {album}",
-                        f"{tracknumber} - {title}.mp3",
+                        f"{tracknumber:02d} - {title}.mp3",
                     ),
                 )
             )
