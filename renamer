@@ -226,26 +226,64 @@ class Movie(Media):
             tmdb_id, tmdb_name, tmdb_year, tmdb_col = movie_details
 
             new_path = os.path.join(
-                self.dest_path, self.sanitize(tmdb_col), f"{self.sanitize(tmdb_name)} ({tmdb_year})", base_path
+                self.dest_path,
+                self.sanitize(tmdb_col),
+                f"{self.sanitize(tmdb_name)} ({tmdb_year})",
+                base_path,
             )
             rename_data.append((file, new_path))
 
         self.confirm_and_exec(rename_data)
 
 
+class Music(Media):
+    def __init__(self, tmdb_api_key, dest_path, files):
+        super().__init__(tmdb_api_key, dest_path, files)
+        self.rename_data = []
+
+    def get_rename_data(self):
+        from mutagen.easyid3 import EasyID3
+
+        for file in self.files:
+            audio = EasyID3(file)
+
+            title = audio.get("title", [""])[0]
+            artist = audio.get("artist", [""])[0]
+            album = audio.get("album", [""])[0]
+            year = audio.get("date", [""])[0].split("-")[0]
+            tracknumber = audio.get("tracknumber", [""])[0].split("/")[0]
+
+            self.rename_data.append(
+                (
+                    file,
+                    os.path.join(
+                        self.dest_path,
+                        f"{artist} - {year} - {album}",
+                        f"{tracknumber} - {title}.mp3",
+                    ),
+                )
+            )
+
+    def rename(self):
+        self.get_rename_data()
+        self.confirm_and_exec(self.rename_data)
+
+
 if __name__ == "__main__":
-    tmdb_api_key = os.getenv("TMDB_API_KEY")
-    if not tmdb_api_key:
-        print("Please export TMDB_API_KEY")
+    if len(sys.argv) < 4:
+        print(
+            "Usage: python3 renamer.py <tv|mov|music> <dest_path> <files and/or dirs>"
+        )
         exit(1)
 
-    if len(sys.argv) < 4:
-        print("Usage: python3 renamer.py <tv|mov> <dest_path> <files and/or dirs>")
+    tmdb_api_key = os.getenv("TMDB_API_KEY")
+    if sys.argv[1] != "music" and not tmdb_api_key:
+        print("Please export TMDB_API_KEY")
         exit(1)
 
     def is_media_file(file):
         _, ext = os.path.splitext(file)
-        return ext in [".mkv", ".mp4", ".avi"]
+        return ext in [".mkv", ".mp4", ".avi", ".mp3"]
 
     paths = []
     for path in sys.argv[3:]:
@@ -270,6 +308,8 @@ if __name__ == "__main__":
         media = Tv(tmdb_api_key, sys.argv[2], paths)
     if sys.argv[1] == "mov":
         media = Movie(tmdb_api_key, sys.argv[2], paths)
+    if sys.argv[1] == "music":
+        media = Music(None, sys.argv[2], paths)
 
     if not media:
         print("Invalid media type")
